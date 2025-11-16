@@ -2,20 +2,20 @@
 
 ## Fixed Issues
 
-### ImportError: cannot import name 'RvrLedGroups'
+### ImportError: cannot import name 'RvrLedGroups' or 'LedGroups'
 
-**Issue:** The Sphero SDK uses `LedGroups` not `RvrLedGroups`
+**Issue:** The correct import path for LED groups was unclear
 
 **Fix Applied:** Changed import from:
 ```python
-from sphero_sdk.common.enums import RvrLedGroups
+from sphero_sdk.common.enums import LedGroups  # WRONG
 ```
 to:
 ```python
-from sphero_sdk.common.enums import LedGroups
+from sphero_sdk import RvrLedGroups  # CORRECT
 ```
 
-All references to `RvrLedGroups.all_lights.value` changed to `LedGroups.all_lights.value`
+The `RvrLedGroups` enum is exported directly from the main `sphero_sdk` package. All LED control now uses `RvrLedGroups.all_lights.value` which is the proper SDK pattern.
 
 ## Potential Issues and Solutions
 

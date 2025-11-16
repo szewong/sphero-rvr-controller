@@ -11,7 +11,7 @@ import time
 from typing import Optional
 
 from sphero_sdk import SpheroRvrAsync
-from sphero_sdk.common.enums import LedGroups
+from sphero_sdk import RvrLedGroups
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class RVRDriver:
 
             # Set LEDs to indicate ready state (green)
             await self.rvr.set_all_leds(
-                led_group=LedGroups.all_lights.value,
+                led_group=RvrLedGroups.all_lights.value,
                 led_brightness_values=[0, 255, 0] * 10  # Green
             )
 
@@ -93,7 +93,7 @@ class RVRDriver:
 
                 # Set LEDs to indicate shutdown (red)
                 await self.rvr.set_all_leds(
-                    led_group=LedGroups.all_lights.value,
+                    led_group=RvrLedGroups.all_lights.value,
                     led_brightness_values=[255, 0, 0] * 10  # Red
                 )
 
@@ -312,12 +312,12 @@ class RVRDriver:
             # Flash LEDs red to indicate emergency stop
             for _ in range(3):
                 await self.rvr.set_all_leds(
-                    led_group=LedGroups.all_lights.value,
+                    led_group=RvrLedGroups.all_lights.value,
                     led_brightness_values=[255, 0, 0] * 10
                 )
                 await asyncio.sleep(0.2)
                 await self.rvr.set_all_leds(
-                    led_group=LedGroups.all_lights.value,
+                    led_group=RvrLedGroups.all_lights.value,
                     led_brightness_values=[0, 0, 0] * 10
                 )
                 await asyncio.sleep(0.2)
