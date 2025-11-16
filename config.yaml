@@ -1,0 +1,113 @@
+# Sphero RVR Controller Configuration
+# Optimized for Raspberry Pi Zero W with Victrix BFG Pro Controller
+
+# Controller Settings
+controller:
+  # Device path - use 'auto' to automatically detect, or specify path like '/dev/input/event0'
+  device_path: 'auto'
+
+  # Controller name pattern for auto-detection
+  device_name: 'Victrix'
+
+  # Event codes for Victrix BFG Pro (standard Xbox-style controller)
+  # Use 'evtest' command to verify these codes for your controller
+  event_codes:
+    right_trigger: 'ABS_RZ'    # Right trigger (forward/throttle)
+    left_trigger: 'ABS_Z'      # Left trigger (reverse)
+    left_stick_x: 'ABS_X'      # Left stick X-axis (steering)
+    left_stick_y: 'ABS_Y'      # Left stick Y-axis (unused)
+
+    # Buttons for servo control
+    button_a: 'BTN_SOUTH'      # A button (servo 1 position 1)
+    button_b: 'BTN_EAST'       # B button (servo 1 position 2)
+    button_x: 'BTN_NORTH'      # X button (servo 2 position 1)
+    button_y: 'BTN_WEST'       # Y button (servo 2 position 2)
+
+  # Deadzone for analog sticks (percentage 0-100)
+  # Prevents drift from centered position
+  deadzone: 5
+
+  # Trigger threshold - minimum value to register as pressed (0-255)
+  trigger_threshold: 10
+
+# RVR Settings
+rvr:
+  # UART port - typically /dev/serial0 on Pi Zero W
+  uart_port: '/dev/serial0'
+
+  # Baud rate (do not change unless you know what you're doing)
+  baud_rate: 115200
+
+  # Connection timeout in seconds
+  connection_timeout: 10
+
+  # Auto-reconnect on connection loss
+  auto_reconnect: true
+
+  # Reconnect delay in seconds
+  reconnect_delay: 2
+
+# Drive Settings
+drive:
+  # Maximum speed (0-255)
+  max_speed: 200
+
+  # Minimum speed to overcome static friction (0-255)
+  min_speed: 40
+
+  # Speed scaling factor (0.0-1.0)
+  # Allows you to limit overall speed without changing max_speed
+  speed_scale: 1.0
+
+  # Steering sensitivity (0.0-2.0)
+  # 1.0 = normal, <1.0 = less sensitive, >1.0 = more sensitive
+  steering_sensitivity: 1.0
+
+  # Heading adjustment speed in degrees per second
+  # Higher = faster turning response
+  heading_speed: 360
+
+# Servo Settings
+servo:
+  # Enable servo control
+  enabled: true
+
+  # Servo configurations (up to 4 servos supported by RVR)
+  servos:
+    - channel: 0
+      name: 'Servo 1'
+      # Position presets (0-255, where 127 is typically center)
+      positions:
+        neutral: 127
+        position1: 50   # Activated by button A
+        position2: 200  # Activated by button B
+
+    - channel: 1
+      name: 'Servo 2'
+      positions:
+        neutral: 127
+        position1: 60   # Activated by button X
+        position2: 190  # Activated by button Y
+
+# Logging Settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: 'INFO'
+
+  # Log file path (use null for stdout only)
+  file: '/var/log/rvr-controller.log'
+
+  # Log controller inputs (useful for debugging, may be verbose)
+  log_inputs: false
+
+  # Log RVR commands
+  log_commands: false
+
+# Safety Settings
+safety:
+  # Emergency stop if no controller input received for this many seconds
+  # Set to 0 to disable
+  input_timeout: 5
+
+  # Emergency stop if RVR connection lost
+  stop_on_disconnect: true

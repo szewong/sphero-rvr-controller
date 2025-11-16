@@ -1,0 +1,33 @@
+[Unit]
+Description=Sphero RVR Controller Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/rvr
+ExecStart=/usr/bin/python3 /home/pi/rvr/rvr_controller.py /home/pi/rvr/config.yaml
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rvr-controller
+
+# Security settings (optional, comment out if causing issues)
+# NoNewPrivileges=true
+# PrivateTmp=true
+
+# Allow access to input devices and serial port
+SupplementaryGroups=input dialout
+
+[Install]
+WantedBy=multi-user.target

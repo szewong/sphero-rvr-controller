@@ -1,0 +1,11 @@
+# Sphero RVR Controller Dependencies
+# Optimized for Raspberry Pi Zero W
+
+# Controller input handling
+evdev>=1.6.0
+
+# Sphero RVR SDK
+sphero-sdk>=1.0.0
+
+# Configuration file parsing
+PyYAML>=6.0
