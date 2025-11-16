@@ -54,7 +54,6 @@ class RVRDriver:
         self.current_speed = 0
         self.current_heading = 0  # Accumulated heading (0-359)
         self.last_update_time = time.time()
-        self.is_turning_in_place = False  # Track if using raw_motors for turning
         self.servo_positions = {}
 
         # Initialize servo positions to neutral
@@ -230,12 +229,11 @@ class RVRDriver:
                 self.current_heading = (self.current_heading + heading_delta) % 360
 
             # Determine if we should send a command
-            # Send if there's any steering input, speed change, or stopping after turn-in-place
+            # Send if there's any steering input (turning in place) or speed change
             should_update = (
                 abs(steering) > 0 or  # Active steering
                 abs(speed - self.current_speed) > 5 or  # Speed changed
-                (speed == 0 and self.current_speed != 0) or  # Coming to a stop
-                (steering == 0 and self.is_turning_in_place)  # Released stick after turning
+                (speed == 0 and self.current_speed != 0)  # Coming to a stop
             )
 
             if should_update:
@@ -265,7 +263,6 @@ class RVRDriver:
                             right_mode=1 if right_speed >= 0 else 2,
                             right_speed=abs(right_speed)
                         )
-                        self.is_turning_in_place = True
                     except (AttributeError, Exception) as e:
                         # Fallback: use drive_with_heading with low speed
                         # This won't turn in place but will adjust heading while moving
@@ -275,19 +272,6 @@ class RVRDriver:
                             heading=self.current_heading,
                             flags=0x01
                         )
-                        self.is_turning_in_place = False
-                elif steering == 0 and speed == 0 and self.is_turning_in_place:
-                    # Explicitly stop raw motors when turning stops
-                    try:
-                        await self.rvr.raw_motors(
-                            left_mode=1,
-                            left_speed=0,
-                            right_mode=1,
-                            right_speed=0
-                        )
-                    except (AttributeError, Exception):
-                        await self.rvr.drive_with_heading(speed=0, heading=self.current_heading, flags=0)
-                    self.is_turning_in_place = False
                 else:
                     # Normal driving with heading
                     await self.rvr.drive_with_heading(
@@ -295,12 +279,11 @@ class RVRDriver:
                         heading=self.current_heading,
                         flags=0x01 if speed >= 0 else 0x02  # Forward or reverse flag
                     )
-                    self.is_turning_in_place = False
 
                 self.current_speed = speed
 
                 if self.config['logging'].get('log_commands', False):
-                    logger.debug(f"Drive command: speed={speed}, heading={self.current_heading}, steering={steering}, turning={self.is_turning_in_place}")
+                    logger.debug(f"Drive command: speed={speed}, heading={self.current_heading}, steering={steering}")
 
         except Exception as e:
             logger.error(f"Error sending drive command: {e}")
@@ -311,19 +294,6 @@ class RVRDriver:
             return
 
         try:
-            # If we were turning in place, stop raw motors explicitly
-            if self.is_turning_in_place:
-                try:
-                    await self.rvr.raw_motors(
-                        left_mode=1,
-                        left_speed=0,
-                        right_mode=1,
-                        right_speed=0
-                    )
-                except (AttributeError, Exception):
-                    pass
-                self.is_turning_in_place = False
-
             # Stop but maintain current heading
             await self.rvr.drive_with_heading(speed=0, heading=self.current_heading, flags=0)
             self.current_speed = 0
