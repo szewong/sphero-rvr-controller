@@ -21,19 +21,22 @@ The `RvrLedGroups` enum is exported directly from the main `sphero_sdk` package.
 
 **Issue:** `__init__() missing 1 required positional argument: 'dal'`
 
-**Fix Applied:** The `SpheroRvrAsync` class requires a `dal` (Data Abstraction Layer) parameter. Changed from:
-```python
-self.rvr = SpheroRvrAsync()  # WRONG
-```
-to:
+**Fix Applied:** The `SpheroRvrAsync` class requires a `dal` (Data Abstraction Layer) parameter. The RVR initialization is now deferred to the async `connect()` method:
 ```python
 from sphero_sdk import SerialAsyncDal
 
-loop = asyncio.get_event_loop()
-self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))  # CORRECT
+# In async connect() method:
+loop = asyncio.get_running_loop()  # Use get_running_loop() in async context
+self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
 ```
 
-The `SerialAsyncDal` handles UART communication and requires the asyncio event loop.
+**Important:** Must use `get_running_loop()` (not `get_event_loop()`) when already in an async context to avoid "This event loop is already running" errors.
+
+### Event Loop Already Running Error
+
+**Issue:** `Fatal error: This event loop is already running`
+
+**Fix Applied:** Moved RVR initialization from `__init__()` to the async `connect()` method and use `asyncio.get_running_loop()` instead of `asyncio.get_event_loop()`. The SerialAsyncDal must be created within async context when a loop is already running.
 
 ### Log File Permission Denied
 

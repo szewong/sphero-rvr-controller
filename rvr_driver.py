@@ -29,9 +29,8 @@ class RVRDriver:
         """
         self.config = config
 
-        # Initialize RVR with SerialAsyncDal for UART communication
-        loop = asyncio.get_event_loop()
-        self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
+        # RVR will be initialized in connect() method to avoid event loop issues
+        self.rvr = None
         self.connected = False
 
         # Drive settings
@@ -62,6 +61,12 @@ class RVRDriver:
             True if connection successful, False otherwise
         """
         try:
+            # Initialize RVR with SerialAsyncDal (must be done in async context)
+            if self.rvr is None:
+                loop = asyncio.get_running_loop()
+                self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
+                logger.info("RVR instance created with SerialAsyncDal")
+
             logger.info("Connecting to Sphero RVR...")
             await self.rvr.wake()
             await asyncio.sleep(2)  # Give RVR time to wake up
