@@ -134,8 +134,8 @@ class RVRController:
         """
         self.last_input_time = time.time()
 
-        if self.config['logging'].get('log_inputs', False):
-            logger.debug(f"Drive input: throttle={throttle}, reverse={reverse}, steering={steering}")
+        # Always log for debugging
+        logger.info(f"Drive input received: throttle={throttle}, reverse={reverse}, steering={steering}")
 
         await self.rvr.drive(throttle, reverse, steering)
 
