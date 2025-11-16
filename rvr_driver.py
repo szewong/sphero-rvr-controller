@@ -98,6 +98,12 @@ class RVRDriver:
             logger.debug("LEDs set successfully")
 
             self.connected = True
+            print("=" * 60)
+            print("RVR CONNECTED SUCCESSFULLY - CODE VERSION: 2025-11-16-v2")
+            print("=" * 60)
+            logger.info("=" * 60)
+            logger.info("RVR CONNECTED SUCCESSFULLY - CODE VERSION: 2025-11-16-v2")
+            logger.info("=" * 60)
             return True
 
         except Exception as e:
@@ -203,6 +209,7 @@ class RVRDriver:
         """
         Drive the RVR based on controller input.
         SIMPLIFIED: Only steering for now, throttle/reverse ignored.
+        VERSION: 2025-11-16-v2
 
         Args:
             throttle: Right trigger value (0-255) - IGNORED
@@ -214,6 +221,7 @@ class RVRDriver:
             return
 
         try:
+            print(f"[DRIVE] Steering input: {steering}")
             logger.info(f"Steering input: {steering}")
 
             # Only handle steering
