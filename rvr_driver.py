@@ -202,10 +202,11 @@ class RVRDriver:
     async def drive(self, throttle: int, reverse: int, steering: int):
         """
         Drive the RVR based on controller input.
+        SIMPLIFIED: Only steering for now, throttle/reverse ignored.
 
         Args:
-            throttle: Right trigger value (0-255)
-            reverse: Left trigger value (0-255)
+            throttle: Right trigger value (0-255) - IGNORED
+            reverse: Left trigger value (0-255) - IGNORED
             steering: Left stick X value (-255 to 255)
         """
         if not self.connected:
@@ -213,88 +214,48 @@ class RVRDriver:
             return
 
         try:
-            # Calculate time delta since last update
-            current_time = time.time()
-            delta_time = current_time - self.last_update_time
-            self.last_update_time = current_time
+            logger.info(f"Steering input: {steering}")
 
-            # Calculate speed
-            speed = self.calculate_speed(throttle, reverse)
+            # Only handle steering
+            if abs(steering) > 0:
+                # Turn in place using raw motors
+                # Positive steering (right) = left forward, right backward
+                # Negative steering (left) = left backward, right forward
 
-            # Calculate heading change based on steering input
-            heading_delta = self.calculate_heading_delta(steering, delta_time)
+                turn_speed = int(abs(steering) * 0.3)
+                turn_speed = max(40, min(turn_speed, 100))  # Clamp between 40-100
 
-            # Update accumulated heading
-            if heading_delta != 0:
-                self.current_heading = (self.current_heading + heading_delta) % 360
-
-            # Determine if we should send a command
-            # Send if there's any steering input (turning in place) or speed change
-            should_update = (
-                abs(steering) > 0 or  # Active steering
-                abs(speed - self.current_speed) > 5 or  # Speed changed
-                (speed == 0 and self.current_speed != 0)  # Coming to a stop
-            )
-
-            # Special case: if we just released steering (no steering, no throttle),
-            # always send a stop command to ensure raw motors stop
-            if steering == 0 and speed == 0 and not should_update:
-                try:
-                    await self.rvr.raw_motors(left_mode=1, left_speed=0, right_mode=1, right_speed=0)
-                except (AttributeError, Exception):
-                    await self.rvr.drive_with_heading(speed=0, heading=self.current_heading, flags=0)
-
-            if should_update:
-                # If only steering (no throttle), turn in place
-                if abs(steering) > 0 and speed == 0:
-                    # Turn in place using raw motors
-                    # For turning in place: left and right motors rotate in opposite directions
-                    # Positive steering (right) = left motor forward, right motor backward
-                    # Negative steering (left) = left motor backward, right motor forward
-                    turn_speed = int(abs(steering) * 0.3)  # Scaled down for controlled turning
-                    turn_speed = max(self.min_speed, min(turn_speed, 100))  # Clamp to reasonable range
-
-                    if steering > 0:
-                        # Turn right: left forward, right backward
-                        left_speed = turn_speed
-                        right_speed = -turn_speed
-                    else:
-                        # Turn left: left backward, right forward
-                        left_speed = -turn_speed
-                        right_speed = turn_speed
-
-                    try:
-                        # Use raw_motors if available, otherwise fall back to drive_with_heading
-                        await self.rvr.raw_motors(
-                            left_mode=1 if left_speed >= 0 else 2,
-                            left_speed=abs(left_speed),
-                            right_mode=1 if right_speed >= 0 else 2,
-                            right_speed=abs(right_speed)
-                        )
-                    except (AttributeError, Exception) as e:
-                        # Fallback: use drive_with_heading with low speed
-                        # This won't turn in place but will adjust heading while moving
-                        logger.debug(f"raw_motors not available, using drive_with_heading fallback: {e}")
-                        await self.rvr.drive_with_heading(
-                            speed=self.min_speed,
-                            heading=self.current_heading,
-                            flags=0x01
-                        )
+                if steering > 0:
+                    # Turn right
+                    left_speed = turn_speed
+                    right_speed = -turn_speed
                 else:
-                    # Normal driving with heading
-                    await self.rvr.drive_with_heading(
-                        speed=abs(speed),
-                        heading=self.current_heading,
-                        flags=0x01 if speed >= 0 else 0x02  # Forward or reverse flag
-                    )
+                    # Turn left
+                    left_speed = -turn_speed
+                    right_speed = turn_speed
 
-                self.current_speed = speed
+                logger.info(f"Turning: left_speed={left_speed}, right_speed={right_speed}")
 
-                if self.config['logging'].get('log_commands', False):
-                    logger.debug(f"Drive command: speed={speed}, heading={self.current_heading}, steering={steering}")
+                await self.rvr.raw_motors(
+                    left_mode=1 if left_speed >= 0 else 2,
+                    left_speed=abs(left_speed),
+                    right_mode=1 if right_speed >= 0 else 2,
+                    right_speed=abs(right_speed)
+                )
+            else:
+                # Steering released - stop motors
+                logger.info("Stopping motors")
+                await self.rvr.raw_motors(
+                    left_mode=1,
+                    left_speed=0,
+                    right_mode=1,
+                    right_speed=0
+                )
 
         except Exception as e:
-            logger.error(f"Error sending drive command: {e}")
+            logger.error(f"Error in drive command: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
     async def stop(self):
         """Stop the RVR."""
