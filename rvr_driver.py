@@ -11,6 +11,7 @@ import time
 from typing import Optional
 
 from sphero_sdk import SpheroRvrAsync
+from sphero_sdk import SerialAsyncDal
 from sphero_sdk import RvrLedGroups
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,10 @@ class RVRDriver:
             config: Configuration dictionary with RVR settings
         """
         self.config = config
-        self.rvr = SpheroRvrAsync()
+
+        # Initialize RVR with SerialAsyncDal for UART communication
+        loop = asyncio.get_event_loop()
+        self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
         self.connected = False
 
         # Drive settings

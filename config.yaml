@@ -95,7 +95,8 @@ logging:
   level: 'INFO'
 
   # Log file path (use null for stdout only)
-  file: '/var/log/rvr-controller.log'
+  # Note: /var/log requires sudo. Use ~/rvr-controller.log for user access
+  file: null  # Set to null to log to console only, or use a writable path
 
   # Log controller inputs (useful for debugging, may be verbose)
   log_inputs: false

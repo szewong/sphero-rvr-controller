@@ -17,6 +17,34 @@ from sphero_sdk import RvrLedGroups  # CORRECT
 
 The `RvrLedGroups` enum is exported directly from the main `sphero_sdk` package. All LED control now uses `RvrLedGroups.all_lights.value` which is the proper SDK pattern.
 
+### Missing 'dal' Parameter Error
+
+**Issue:** `__init__() missing 1 required positional argument: 'dal'`
+
+**Fix Applied:** The `SpheroRvrAsync` class requires a `dal` (Data Abstraction Layer) parameter. Changed from:
+```python
+self.rvr = SpheroRvrAsync()  # WRONG
+```
+to:
+```python
+from sphero_sdk import SerialAsyncDal
+
+loop = asyncio.get_event_loop()
+self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))  # CORRECT
+```
+
+The `SerialAsyncDal` handles UART communication and requires the asyncio event loop.
+
+### Log File Permission Denied
+
+**Issue:** Warning about not being able to create `/var/log/rvr-controller.log`
+
+**Fix Applied:** Changed default config to use `null` (console only) instead of `/var/log/` which requires sudo permissions. Users can set a writable path like:
+```yaml
+logging:
+  file: '~/rvr-controller.log'  # or null for console only
+```
+
 ## Potential Issues and Solutions
 
 ### 1. Servo Control Method Not Found
