@@ -11,9 +11,14 @@ import time
 import traceback
 from typing import Optional
 
+import nest_asyncio
+
 from sphero_sdk import SpheroRvrAsync
 from sphero_sdk import SerialAsyncDal
 from sphero_sdk import RvrLedGroups
+
+# Enable nested event loops (required for Sphero SDK in Python 3.7)
+nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
 

@@ -9,3 +9,6 @@ sphero-sdk>=1.0.0
 
 # Configuration file parsing
 PyYAML>=6.0
+
+# Allow nested event loops (required for Sphero SDK in Python 3.7)
+nest-asyncio>=1.5.0

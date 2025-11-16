@@ -34,9 +34,21 @@ self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
 
 ### Event Loop Already Running Error
 
-**Issue:** `Fatal error: This event loop is already running`
+**Issue:** `Fatal error: This event loop is already running` or `RuntimeError: This event loop is already running` during `SpheroRvrAsync` initialization
 
-**Fix Applied:** Moved RVR initialization from `__init__()` to the async `connect()` method and use `asyncio.get_running_loop()` instead of `asyncio.get_event_loop()`. The SerialAsyncDal must be created within async context when a loop is already running.
+**Root Cause:** The Sphero SDK's `SpheroRvrAsync.__init__()` calls `_check_rvr_fw()` which uses `loop.run_until_complete()`. This fails when the event loop is already running (which it is in Python 3.7+ when using `asyncio.run()`).
+
+**Fix Applied:**
+1. Moved RVR initialization from `__init__()` to the async `connect()` method
+2. Use `asyncio.get_running_loop()` instead of `asyncio.get_event_loop()`
+3. Added `nest-asyncio` package to allow nested event loops (required for Sphero SDK compatibility)
+
+The `nest_asyncio.apply()` is called at module import in `rvr_driver.py`, which patches the event loop to allow the SDK's synchronous calls within an async context.
+
+**Manual Fix:** If you encounter this error, ensure `nest-asyncio` is installed:
+```bash
+pip3 install nest-asyncio
+```
 
 ### Log File Permission Denied
 
