@@ -195,38 +195,85 @@ sudo raspi-config
 # - Serial hardware enabled: YES
 ```
 
-### 6. RVR Connection Timeout
+### 6. RVR Connection Timeout / Program Terminates
 
-**Symptom:** "Failed to connect to RVR: timeout"
+**Symptom:** "Failed to connect to RVR" or program terminates after "Connecting to RVR..."
 
 **Possible causes:**
 - Wrong UART wiring
 - RVR not powered on
 - RVR battery dead
 - Wrong UART device
+- Permission issues on /dev/serial0
+- UART not enabled in raspi-config
 
 **Solution:**
 
-1. Check UART device:
-```bash
-ls -l /dev/serial0 /dev/ttyAMA0 /dev/ttyS0
+1. **Enable DEBUG logging** to see detailed error messages in `config.yaml`:
+```yaml
+logging:
+  level: 'DEBUG'
 ```
 
-2. Test UART communication:
+2. **Check UART device exists and has permissions:**
+```bash
+ls -l /dev/serial0 /dev/ttyAMA0 /dev/ttyS0
+# Should show: /dev/serial0 -> ttyAMA0
+# Check you're in dialout group:
+groups
+```
+
+3. **Test UART communication:**
 ```bash
 sudo apt-get install minicom
 minicom -b 115200 -o -D /dev/serial0
+# You should see output when RVR is powered on
 ```
 
-3. Verify wiring:
+4. **Verify wiring:**
    - RVR TX → Pi RX (GPIO 15, Pin 10)
    - RVR RX → Pi TX (GPIO 14, Pin 8)
    - RVR GND → Pi GND (Pin 6)
+   - Double-check you didn't swap TX/RX
 
-4. Try different UART device in `config.yaml`:
+5. **Verify RVR is powered on and charged:**
+   - Press power button - should see LEDs
+   - Try charging if battery is low
+
+6. **Try different UART device** in `config.yaml`:
 ```yaml
 rvr:
   uart_port: '/dev/ttyAMA0'  # Try this instead of /dev/serial0
+  # Or try: '/dev/ttyS0'
+```
+
+7. **Check Sphero SDK is installed correctly:**
+```bash
+pip3 list | grep sphero
+# Should show: sphero-sdk
+```
+
+8. **Run test script** to isolate the issue:
+```python
+#!/usr/bin/env python3
+import asyncio
+from sphero_sdk import SpheroRvrAsync, SerialAsyncDal
+
+async def test():
+    loop = asyncio.get_running_loop()
+    rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
+    print("Created RVR instance")
+
+    await rvr.wake()
+    print("Wake command sent")
+    await asyncio.sleep(2)
+
+    battery = await rvr.get_battery_percentage()
+    print(f"Battery: {battery}")
+
+    await rvr.close()
+
+asyncio.run(test())
 ```
 
 ### 7. High Latency / Slow Response

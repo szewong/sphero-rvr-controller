@@ -8,6 +8,7 @@ Optimized for Raspberry Pi Zero W
 import asyncio
 import logging
 import time
+import traceback
 from typing import Optional
 
 from sphero_sdk import SpheroRvrAsync
@@ -63,29 +64,36 @@ class RVRDriver:
         try:
             # Initialize RVR with SerialAsyncDal (must be done in async context)
             if self.rvr is None:
+                logger.debug("Creating SerialAsyncDal...")
                 loop = asyncio.get_running_loop()
                 self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
                 logger.info("RVR instance created with SerialAsyncDal")
 
-            logger.info("Connecting to Sphero RVR...")
+            logger.info("Waking RVR via UART...")
             await self.rvr.wake()
+            logger.debug("Wake command sent, waiting 2 seconds...")
             await asyncio.sleep(2)  # Give RVR time to wake up
 
+            logger.debug("Requesting battery percentage...")
             # Test connection with battery percentage request
             battery = await self.rvr.get_battery_percentage()
             logger.info(f"Connected to RVR. Battery: {battery['percentage']}%")
 
+            logger.debug("Setting LED colors to green...")
             # Set LEDs to indicate ready state (green)
             await self.rvr.set_all_leds(
                 led_group=RvrLedGroups.all_lights.value,
                 led_brightness_values=[0, 255, 0] * 10  # Green
             )
+            logger.debug("LEDs set successfully")
 
             self.connected = True
             return True
 
         except Exception as e:
             logger.error(f"Failed to connect to RVR: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Traceback:\n{traceback.format_exc()}")
             self.connected = False
             return False
 
