@@ -99,10 +99,10 @@ logging:
   file: null  # Set to null to log to console only, or use a writable path
 
   # Log controller inputs (useful for debugging, may be verbose)
-  log_inputs: false
+  log_inputs: true
 
   # Log RVR commands
-  log_commands: false
+  log_commands: true
 
 # Safety Settings
 safety:
