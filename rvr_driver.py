@@ -236,6 +236,14 @@ class RVRDriver:
                 (speed == 0 and self.current_speed != 0)  # Coming to a stop
             )
 
+            # Special case: if we just released steering (no steering, no throttle),
+            # always send a stop command to ensure raw motors stop
+            if steering == 0 and speed == 0 and not should_update:
+                try:
+                    await self.rvr.raw_motors(left_mode=1, left_speed=0, right_mode=1, right_speed=0)
+                except (AttributeError, Exception):
+                    await self.rvr.drive_with_heading(speed=0, heading=self.current_heading, flags=0)
+
             if should_update:
                 # If only steering (no throttle), turn in place
                 if abs(steering) > 0 and speed == 0:
