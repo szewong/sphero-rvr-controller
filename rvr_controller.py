@@ -36,7 +36,7 @@ class RVRController:
 
         # Initialize components
         self.controller = ControllerInput(self.config['controller'])
-        self.rvr = RVRDriver(self.config['rvr'])
+        self.rvr = RVRDriver(self.config)  # Pass full config (needs rvr, drive, servo sections)
 
         # Safety settings
         self.input_timeout = self.config['safety']['input_timeout']
