@@ -28,15 +28,24 @@ class RVRController:
         Args:
             config_path: Path to configuration file
         """
+        print(f"RVRController.__init__() called with config_path: {config_path}")
+
         # Load configuration
+        print("Loading configuration...")
         self.config = self.load_config(config_path)
+        print("Configuration loaded successfully")
 
         # Setup logging
+        print("Setting up logging...")
         self.setup_logging()
+        print("Logging configured")
 
         # Initialize components
+        print("Creating ControllerInput...")
         self.controller = ControllerInput(self.config['controller'])
+        print("Creating RVRDriver...")
         self.rvr = RVRDriver(self.config)  # Pass full config (needs rvr, drive, servo sections)
+        print("RVRDriver created")
 
         # Safety settings
         self.input_timeout = self.config['safety']['input_timeout']
@@ -236,23 +245,37 @@ class RVRController:
 
 async def main():
     """Entry point."""
+    print("In main() function...")
+
     # Determine config path
     config_path = 'config.yaml'
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
 
+    print(f"Using config file: {config_path}")
+
     # Create and run controller
+    print("Creating RVRController instance...")
     controller = RVRController(config_path)
+    print("RVRController created, calling run()...")
     return await controller.run()
 
 
 if __name__ == '__main__':
+    print("Starting Sphero RVR Controller...")
+    print(f"Python version: {sys.version}")
+
     try:
+        print("Calling asyncio.run(main())...")
         exit_code = asyncio.run(main())
+        print(f"Main returned exit code: {exit_code}")
         sys.exit(exit_code)
     except KeyboardInterrupt:
         print("\nInterrupted by user")
         sys.exit(0)
     except Exception as e:
         print(f"Fatal error: {e}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback:\n{traceback.format_exc()}")
         sys.exit(1)
