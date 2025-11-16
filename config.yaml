@@ -7,7 +7,7 @@ controller:
   device_path: 'auto'
 
   # Controller name pattern for auto-detection
-  device_name: 'Victrix'
+  device_name: 'X-Box pad'
 
   # Event codes for Victrix BFG Pro (standard Xbox-style controller)
   # Use 'evtest' command to verify these codes for your controller
