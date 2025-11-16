@@ -61,12 +61,16 @@ class RVRDriver:
         Returns:
             True if connection successful, False otherwise
         """
+        print("RVRDriver.connect() called")
         try:
             # Initialize RVR with SerialAsyncDal (must be done in async context)
             if self.rvr is None:
+                print("Creating SerialAsyncDal...")
                 logger.debug("Creating SerialAsyncDal...")
                 loop = asyncio.get_running_loop()
+                print(f"Got running loop: {loop}")
                 self.rvr = SpheroRvrAsync(dal=SerialAsyncDal(loop))
+                print("SpheroRvrAsync instance created")
                 logger.info("RVR instance created with SerialAsyncDal")
 
             logger.info("Waking RVR via UART...")
@@ -91,6 +95,9 @@ class RVRDriver:
             return True
 
         except Exception as e:
+            print(f"EXCEPTION in RVRDriver.connect(): {e}")
+            print(f"Exception type: {type(e).__name__}")
+            print(f"Traceback:\n{traceback.format_exc()}")
             logger.error(f"Failed to connect to RVR: {e}")
             logger.error(f"Exception type: {type(e).__name__}")
             logger.error(f"Traceback:\n{traceback.format_exc()}")
