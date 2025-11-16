@@ -52,7 +52,8 @@ class RVRDriver:
 
         # Current state
         self.current_speed = 0
-        self.current_heading = 0
+        self.current_heading = 0  # Accumulated heading (0-359)
+        self.last_update_time = time.time()
         self.servo_positions = {}
 
         # Initialize servo positions to neutral
@@ -170,34 +171,33 @@ class RVRDriver:
 
         return scaled_speed
 
-    def calculate_heading(self, steering: int) -> int:
+    def calculate_heading_delta(self, steering: int, delta_time: float) -> int:
         """
-        Calculate heading adjustment from steering input.
+        Calculate heading change from steering input over time.
 
         Args:
             steering: Left stick X value (-255 to 255)
+            delta_time: Time elapsed since last update in seconds
 
         Returns:
-            Heading in degrees (0-359)
+            Heading change in degrees
         """
+        if steering == 0:
+            # No steering input, no heading change
+            return 0
+
         # Apply steering sensitivity
         adjusted_steering = steering * self.steering_sensitivity
 
-        # Convert to heading (0 = forward, 90 = right, 270 = left)
-        # Steering: -255 (left) to 255 (right)
-        # Map to: 270 (left) to 90 (right), with 0 as center (forward)
+        # Calculate rotation rate based on steering input
+        # Max rotation rate is heading_speed degrees per second
+        # Steering range: -255 (left) to 255 (right)
+        rotation_rate = (adjusted_steering / 255) * self.heading_speed
 
-        if adjusted_steering > 0:
-            # Turning right: 0 to 90 degrees
-            heading = int((adjusted_steering / 255) * 90)
-        elif adjusted_steering < 0:
-            # Turning left: 270 to 360 degrees
-            heading = int(360 + (adjusted_steering / 255) * 90)
-        else:
-            # Straight ahead
-            heading = 0
+        # Calculate heading change over the time delta
+        heading_delta = int(rotation_rate * delta_time)
 
-        return heading
+        return heading_delta
 
     async def drive(self, throttle: int, reverse: int, steering: int):
         """
@@ -213,22 +213,77 @@ class RVRDriver:
             return
 
         try:
-            speed = self.calculate_speed(throttle, reverse)
-            heading = self.calculate_heading(steering)
+            # Calculate time delta since last update
+            current_time = time.time()
+            delta_time = current_time - self.last_update_time
+            self.last_update_time = current_time
 
-            # Only send command if speed or heading changed significantly
-            if abs(speed - self.current_speed) > 5 or abs(heading - self.current_heading) > 5:
-                await self.rvr.drive_with_heading(
-                    speed=abs(speed),
-                    heading=heading,
-                    flags=0x01 if speed >= 0 else 0x02  # Forward or reverse flag
-                )
+            # Calculate speed
+            speed = self.calculate_speed(throttle, reverse)
+
+            # Calculate heading change based on steering input
+            heading_delta = self.calculate_heading_delta(steering, delta_time)
+
+            # Update accumulated heading
+            if heading_delta != 0:
+                self.current_heading = (self.current_heading + heading_delta) % 360
+
+            # Determine if we should send a command
+            # Send if there's any steering input (turning in place) or speed change
+            should_update = (
+                abs(steering) > 0 or  # Active steering
+                abs(speed - self.current_speed) > 5 or  # Speed changed
+                (speed == 0 and self.current_speed != 0)  # Coming to a stop
+            )
+
+            if should_update:
+                # If only steering (no throttle), turn in place
+                if abs(steering) > 0 and speed == 0:
+                    # Turn in place using raw motors
+                    # For turning in place: left and right motors rotate in opposite directions
+                    # Positive steering (right) = left motor forward, right motor backward
+                    # Negative steering (left) = left motor backward, right motor forward
+                    turn_speed = int(abs(steering) * 0.3)  # Scaled down for controlled turning
+                    turn_speed = max(self.min_speed, min(turn_speed, 100))  # Clamp to reasonable range
+
+                    if steering > 0:
+                        # Turn right: left forward, right backward
+                        left_speed = turn_speed
+                        right_speed = -turn_speed
+                    else:
+                        # Turn left: left backward, right forward
+                        left_speed = -turn_speed
+                        right_speed = turn_speed
+
+                    try:
+                        # Use raw_motors if available, otherwise fall back to drive_with_heading
+                        await self.rvr.raw_motors(
+                            left_mode=1 if left_speed >= 0 else 2,
+                            left_speed=abs(left_speed),
+                            right_mode=1 if right_speed >= 0 else 2,
+                            right_speed=abs(right_speed)
+                        )
+                    except (AttributeError, Exception) as e:
+                        # Fallback: use drive_with_heading with low speed
+                        # This won't turn in place but will adjust heading while moving
+                        logger.debug(f"raw_motors not available, using drive_with_heading fallback: {e}")
+                        await self.rvr.drive_with_heading(
+                            speed=self.min_speed,
+                            heading=self.current_heading,
+                            flags=0x01
+                        )
+                else:
+                    # Normal driving with heading
+                    await self.rvr.drive_with_heading(
+                        speed=abs(speed),
+                        heading=self.current_heading,
+                        flags=0x01 if speed >= 0 else 0x02  # Forward or reverse flag
+                    )
 
                 self.current_speed = speed
-                self.current_heading = heading
 
                 if self.config['logging'].get('log_commands', False):
-                    logger.debug(f"Drive command: speed={speed}, heading={heading}")
+                    logger.debug(f"Drive command: speed={speed}, heading={self.current_heading}, steering={steering}")
 
         except Exception as e:
             logger.error(f"Error sending drive command: {e}")
@@ -239,9 +294,10 @@ class RVRDriver:
             return
 
         try:
-            await self.rvr.drive_with_heading(speed=0, heading=0, flags=0)
+            # Stop but maintain current heading
+            await self.rvr.drive_with_heading(speed=0, heading=self.current_heading, flags=0)
             self.current_speed = 0
-            logger.info("RVR stopped")
+            logger.info(f"RVR stopped at heading {self.current_heading}")
         except Exception as e:
             logger.error(f"Error stopping RVR: {e}")
 
