@@ -80,14 +80,26 @@ class RVRDriver:
                 logger.info("RVR instance created with SerialAsyncDal")
 
             logger.info("Waking RVR via UART...")
-            await self.rvr.wake()
-            logger.debug("Wake command sent, waiting 2 seconds...")
+            print("=" * 60)
+            print("SENDING WAKE COMMAND TO RVR")
+            print("=" * 60)
+
+            # Try waking multiple times to ensure it works
+            for attempt in range(3):
+                print(f"Wake attempt {attempt + 1}/3...")
+                await self.rvr.wake()
+                await asyncio.sleep(1)
+
+            print("Wake commands sent, waiting for RVR to fully wake...")
+            logger.debug("Wake commands sent, waiting 2 seconds...")
             await asyncio.sleep(2)  # Give RVR time to wake up
 
+            print("Verifying connection with battery request...")
             logger.debug("Requesting battery percentage...")
             # Test connection with battery percentage request
             battery = await self.rvr.get_battery_percentage()
             logger.info(f"Connected to RVR. Battery: {battery['percentage']}%")
+            print(f"Battery: {battery['percentage']}% - RVR IS AWAKE!")
 
             logger.debug("Setting LED colors to green...")
             # Set LEDs to indicate ready state (green)
